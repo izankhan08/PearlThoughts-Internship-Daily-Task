@@ -1,6 +1,24 @@
+provider "aws" {
+  region = "us-east-1"
+}
+
+# Default VPC fetch
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Default subnets fetch
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# Latest Ubuntu AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical
+  owners      = ["099720109477"]
 
   filter {
     name   = "name"
