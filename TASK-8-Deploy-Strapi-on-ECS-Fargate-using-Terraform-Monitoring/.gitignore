@@ -1,0 +1,15 @@
+# Node
+**/node_modules/
+**/.cache/
+**/build/
+**/.env
+
+# Terraform
+**/.terraform/*
+**/*.tfstate
+**/*.tfstate.*
+crash.log
+
+# OS
+.DS_Store
+Thumbs.db
