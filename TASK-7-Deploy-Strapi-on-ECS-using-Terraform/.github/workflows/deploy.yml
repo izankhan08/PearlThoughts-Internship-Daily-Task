@@ -1,0 +1,65 @@
+name: Deploy Strapi to ECS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build and Push Docker Image
+      run: |
+        IMAGE_TAG=${GITHUB_SHA::7}
+        IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+
+        docker build -t $IMAGE_URI .
+        docker push $IMAGE_URI
+
+        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+    - name: Download current task definition
+      run: |
+        aws ecs describe-task-definition \
+          --task-definition strapi-task > task-def.json
+
+    - name: Clean & update task definition image
+      run: |
+        cat task-def.json \
+        | jq '.taskDefinition
+          | del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )
+          | .containerDefinitions[0].image = env.IMAGE_URI' \
+        > new-task-def.json
+
+    - name: Register new task definition revision
+      run: |
+        aws ecs register-task-definition --cli-input-json file://new-task-def.json
+
+    - name: Deploy new revision to ECS
+      run: |
+        aws ecs update-service \
+          --cluster strapi-cluster \
+          --service strapi-service \
+          --force-new-deployment
