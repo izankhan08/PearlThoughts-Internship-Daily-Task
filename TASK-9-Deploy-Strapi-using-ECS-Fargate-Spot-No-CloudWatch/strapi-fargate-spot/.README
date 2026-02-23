@@ -1,0 +1,179 @@
+🚀 Task 9 - Deploy Strapi using ECS Fargate Spot (No CloudWatch)
+📌 Project Overview
+
+This project demonstrates deploying a Strapi CMS application on Amazon ECS using Fargate Spot, with infrastructure fully managed using Terraform.
+
+The deployment intentionally excludes CloudWatch monitoring as per task requirement.
+
+This setup showcases containerized deployment, infrastructure as code (IaC), IAM configuration, networking setup, and cost optimization using Fargate Spot.
+
+🏗️ Architecture Overview
+
+The infrastructure includes:
+
+Amazon ECS Cluster
+
+ECS Task Definition
+
+ECS Service
+
+Fargate Spot Capacity Provider
+
+IAM Execution Role
+
+Security Group
+
+Default VPC & Subnets
+
+Public IP Assignment
+
+Docker Image stored in Amazon ECR
+
+🛠️ Technologies Used
+
+Amazon Web Services (AWS)
+
+Amazon ECS
+
+AWS Fargate Spot
+
+AWS IAM
+
+AWS VPC
+
+Amazon ECR
+
+Terraform
+
+Docker
+
+Git & GitHub
+
+📂 Project Structure
+TASK-9-Deploy-Strapi-using-ECS-Fargate-Spot-No-CloudWatch/
+└── strapi-fargate-spot/
+    ├── main.tf
+    ├── iam.tf
+    ├── provider.tf
+    ├── outputs.tf
+    ├── .terraform.lock.hcl
+    ├── .gitignore
+    ├── README.md
+    └── my-strapi/
+⚙️ Infrastructure Details
+1️⃣ AWS Provider
+
+Defines AWS region and provider configuration.
+
+2️⃣ Networking
+
+Uses Default VPC
+
+Dynamically fetches default subnets
+
+3️⃣ Security Group
+
+Allows inbound traffic on port 1337
+
+Allows all outbound traffic
+
+4️⃣ ECS Cluster
+
+Creates a dedicated ECS cluster:
+
+izan-strapi-cluster-v2
+5️⃣ ECS Task Definition
+
+Launch Type Compatibility: FARGATE
+
+CPU: 512
+
+Memory: 1024
+
+Container Port: 1337
+
+Docker Image: Pulled from Amazon ECR
+
+IAM Execution Role attached
+
+6️⃣ ECS Service
+
+Desired Count: 1
+
+Capacity Provider: FARGATE_SPOT
+
+Assign Public IP: Enabled
+
+Custom Security Group Attached
+
+🚀 Deployment Steps
+1️⃣ Initialize Terraform
+terraform init
+2️⃣ Plan Infrastructure
+terraform plan
+3️⃣ Apply Configuration
+terraform apply
+
+Terraform will create:
+
+ECS Cluster
+
+Security Group
+
+IAM Role
+
+Task Definition
+
+ECS Service
+
+🌍 Accessing the Application
+
+After successful deployment:
+
+Go to AWS Console
+
+Navigate to ECS → Cluster → Service → Tasks
+
+Click running task
+
+Copy Public IP
+
+Open in browser:
+
+http://PUBLIC-IP:1337
+
+If everything is configured correctly, Strapi CMS will load successfully.
+
+🔐 Security & Best Practices
+
+.env file is excluded from repository
+
+.terraform folder is ignored
+
+Terraform state files are not committed
+
+IAM role limited to ECS execution permissions
+
+No hardcoded credentials in repository
+
+💡 Key Learnings
+
+Deploying containerized applications using ECS Fargate
+
+Using Fargate Spot for cost optimization
+
+Managing infrastructure with Terraform
+
+IAM role configuration for ECS tasks
+
+Handling launch type vs capacity provider conflicts
+
+Cleaning Git repository (removing large files and secrets)
+
+Debugging ECS service deployment errors
+
+💰 Cost Optimization
+
+Using FARGATE_SPOT significantly reduces compute costs compared to standard Fargate.
+
+This approach is ideal for non-production or interruptible workloads.
