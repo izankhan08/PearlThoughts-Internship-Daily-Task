@@ -142,22 +142,6 @@ http://izan-task10-alb-xxxxxxxx.us-east-1.elb.amazonaws.com
 Nginx welcome page successfully loaded through ALB.
 ---
 
-# 📸 Screenshots
-
-## ECS Cluster Active
-![ECS Cluster](screenshots/01-ecs-cluster.png)
-
-## ECS Service Running
-![ECS Service](screenshots/02-ecs-service.png)
-
-## Target Group Healthy
-![Target Group](screenshots/03-target-group.png)
-
-## CodeDeploy Deployment Success
-![CodeDeploy](screenshots/04-codedeploy-success.png)
-
-## ALB DNS Working
-![ALB DNS](screenshots/05-alb-dns.png)
 
 ---
 
