@@ -44,12 +44,13 @@ jobs:
           echo "Pushing Docker Image..."
           docker push $ECR_URI:$IMAGE_TAG
 
-      - name: Register New ECS Task Definition
+            - name: Register New ECS Task Definition
+        id: taskdef
         run: |
           IMAGE_TAG=${{ github.sha }}
-          ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY
+          ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/task11-izan-repo
 
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition $ECS_TASK_FAMILY)
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition task11-izan-task)
 
           NEW_TASK_DEF=$(echo $TASK_DEF | jq \
             --arg IMAGE "$ECR_URI:$IMAGE_TAG" \
@@ -65,13 +66,41 @@ jobs:
 
           echo "$NEW_TASK_DEF" > new-task-def.json
 
-          aws ecs register-task-definition \
-            --cli-input-json file://new-task-def.json
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "TASK_DEF_ARN=$TASK_DEF_ARN" >> $GITHUB_ENV
+
+
+      - name: Create AppSpec File
+        run: |
+          cat <<EOF > appspec.json
+          {
+            "version": 1,
+            "Resources": [
+              {
+                "TargetService": {
+                  "Type": "AWS::ECS::Service",
+                  "Properties": {
+                    "TaskDefinition": "${TASK_DEF_ARN}",
+                    "LoadBalancerInfo": {
+                      "ContainerName": "task11-container",
+                      "ContainerPort": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+          EOF
+
 
       - name: Trigger CodeDeploy Deployment
         run: |
           aws deploy create-deployment \
-            --application-name $CODEDEPLOY_APP \
-            --deployment-group-name $CODEDEPLOY_DG \
+            --application-name task11-izan-app \
+            --deployment-group-name task11-izan-dg \
             --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-            --revision revisionType=AppSpecContent,appSpecContent="{\"version\":1,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::ECS::Service\",\"Properties\":{\"TaskDefinition\":\"$ECS_TASK_FAMILY\",\"LoadBalancerInfo\":{\"ContainerName\":\"task11-container\",\"ContainerPort\":80}}}}]}"
+            --revision revisionType=AppSpecContent,appSpecContent=file://appspec.json
