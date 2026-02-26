@@ -29,7 +29,9 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+          aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS --password-stdin \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
 
       - name: Build and Push Docker Image
         run: |
@@ -40,6 +42,7 @@ jobs:
           docker push $ECR_URI:$IMAGE_TAG
 
       - name: Register New ECS Task Definition
+        id: taskdef
         run: |
           IMAGE_TAG=${{ github.sha }}
           ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY
@@ -83,15 +86,10 @@ jobs:
           }
           EOF
 
-            - name: Trigger CodeDeploy Deployment
+      - name: Trigger CodeDeploy Deployment
         run: |
           aws deploy create-deployment \
             --application-name $CODEDEPLOY_APP \
             --deployment-group-name $CODEDEPLOY_DG \
             --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-            --revision '{
-              "revisionType": "AppSpecContent",
-              "appSpecContent": {
-                "content": "{\"version\":1,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::ECS::Service\",\"Properties\":{\"TaskDefinition\":\"'"$TASK_DEF_ARN"'\",\"LoadBalancerInfo\":{\"ContainerName\":\"task11-container\",\"ContainerPort\":80}}}}]}"
-              }
-            }'
+            --revision revisionType=AppSpecContent,appSpecContent=fileb://appspec.json
