@@ -1,0 +1,60 @@
+name: TASK-11 Deploy to ECS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ACCOUNT_ID: 811738710312
+  ECR_REPOSITORY: your-ecr-repo
+  ECS_CLUSTER: your-ecs-cluster
+  ECS_SERVICE: your-ecs-service
+  TASK_DEFINITION: your-task-def-name
+  CODEDEPLOY_APP: your-codedeploy-app
+  CODEDEPLOY_GROUP: your-deployment-group
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get install jq -y
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "IMAGE_URI=$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Update ECS Task Definition
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION)
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg IMAGE "$IMAGE_URI" '.taskDefinition | .containerDefinitions[0].image=$IMAGE | del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)')
+          echo $NEW_TASK_DEF > new-task-def.json
+          aws ecs register-task-definition --cli-input-json file://new-task-def.json
+
+      - name: Trigger CodeDeploy Deployment
+        run: |
+          aws deploy create-deployment \
+            --application-name $CODEDEPLOY_APP \
+            --deployment-group-name $CODEDEPLOY_GROUP \
+            --deployment-config-name CodeDeployDefault.ECSAllAtOnce
