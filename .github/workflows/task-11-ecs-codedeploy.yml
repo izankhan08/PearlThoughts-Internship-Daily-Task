@@ -83,11 +83,15 @@ jobs:
           }
           EOF
 
-      - name: Trigger CodeDeploy Deployment
+            - name: Trigger CodeDeploy Deployment
         run: |
           aws deploy create-deployment \
             --application-name $CODEDEPLOY_APP \
             --deployment-group-name $CODEDEPLOY_DG \
             --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-            --revision revisionType=AppSpecContent,appSpecContent=file://appspec.json
-            
+            --revision '{
+              "revisionType": "AppSpecContent",
+              "appSpecContent": {
+                "content": "{\"version\":1,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::ECS::Service\",\"Properties\":{\"TaskDefinition\":\"'"$TASK_DEF_ARN"'\",\"LoadBalancerInfo\":{\"ContainerName\":\"task11-container\",\"ContainerPort\":80}}}}]}"
+              }
+            }'
